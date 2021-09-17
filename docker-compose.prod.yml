@@ -1,0 +1,76 @@
+version: '3.7'
+services:
+  redis:
+    build:
+      context: .
+      dockerfile: redis/Dockerfile
+    container_name: claude_papyrus_redis
+    networks:
+      - proxy
+
+  nginx:
+    build:
+      context: .
+      dockerfile: nginx/Dockerfile
+      args:
+        crt: ./certs/localhost.crt
+        key: ./certs/localhost.key
+        fastcgi: ./nginx/config/fastcgi.conf
+        default_conf: ./nginx/config/default.conf
+        nginx_conf: ./nginx/config/nginx_prod.conf
+    volumes:
+      - /var/www/web/papyrus/www:/var/www/html
+      - /var/www/web/papyrus/data:/var/www/data
+      - /var/www/web/papyrus/logs/nginx:/var/log/nginx
+    links:
+      - php
+    container_name: claude_papyrus_nginx
+    networks:
+      - proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=proxy"
+      - "traefik.http.routers.claude_papyrus_nginx-secure.entrypoints=websecure"
+      - "traefik.http.routers.claude_papyrus_nginx-secure.middlewares=user-auth@file"
+      - "traefik.http.routers.claude_papyrus_nginx-secure.rule=Host(`papyrus.${DOMAIN}`)"
+
+  db:
+    build:
+      context: .
+      dockerfile: mariadb/Dockerfile
+    container_name: claude_papyrus_db
+    command: [mysqld, --character-set-server=utf8mb4, --collation-server=utf8mb4_unicode_ci, --innodb-file-format=Barracuda, --innodb-large-prefix=1, --innodb-file-per-table=1]
+    volumes:
+      - /var/www/web/papyrus/mysqlData/data:/var/lib/mysql
+      - /var/www/web/papyrus/mariadb/exchange:/data_exchange
+      - /var/www/web/papyrus/mariadb/logs/mysql:/var/logs/mysql
+      - /var/www/web/papyrus/mariadb/data/mariadb/conf:/etc/mysql/conf.d
+    environment:
+      - MYSQL_ROOT_PASSWORD=ROOT
+      - MYSQL_DATABASE=papyrus
+      - MYSQL_USER=papyrus
+      - MYSQL_PASSWORD=papyrus
+    networks:
+      - proxy
+
+  php:
+    build:
+      context: .
+      dockerfile: php/Dockerfile
+    container_name: claude_papyrus_php-fpm
+    volumes:
+      - /var/www/web/papyrus/www:/var/www/html:cached
+      - /var/www/web/papyrus/data/nginx:/var/www/data
+      - /var/www/web/papyrus/logs/php-fpm:/var/log/php
+      - /var/www/web/papyrus/logs/cron:/var/log/cron
+    depends_on:
+      - db
+    networks:
+      - proxy
+
+volumes:
+  papyrus-database:
+
+networks:
+  proxy:
+    external: true
