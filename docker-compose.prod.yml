@@ -32,7 +32,7 @@ services:
       - "traefik.docker.network=proxy"
       - "traefik.http.routers.claude_papyrus_nginx-secure.entrypoints=websecure"
       - "traefik.http.routers.claude_papyrus_nginx-secure.middlewares=user-auth@file"
-      - "traefik.http.routers.claude_papyrus_nginx-secure.rule=Host(`papyrus.${DOMAIN}`)"
+      - "traefik.http.routers.claude_papyrus_nginx-secure.rule=Host(`${DOMAIN}`)"
 
   db:
     build:
@@ -42,9 +42,9 @@ services:
     command: [mysqld, --character-set-server=utf8mb4, --collation-server=utf8mb4_unicode_ci, --innodb-file-format=Barracuda, --innodb-large-prefix=1, --innodb-file-per-table=1]
     volumes:
       - /var/www/web/papyrus/mysqlData/data:/var/lib/mysql
-      - /var/www/web/papyrus/mariadb/exchange:/data_exchange
-      - /var/www/web/papyrus/mariadb/logs/mysql:/var/logs/mysql
-      - /var/www/web/papyrus/mariadb/data/mariadb/conf:/etc/mysql/conf.d
+      - /var/www/docker/papyrus/mariadb/exchange:/data_exchange
+      - /var/www/docker/papyrus/mariadb/logs/mysql:/var/logs/mysql
+      - /var/www/docker/papyrus/mariadb/data/mariadb/conf:/etc/mysql/conf.d
     environment:
       - MYSQL_ROOT_PASSWORD=ROOT
       - MYSQL_DATABASE=papyrus
